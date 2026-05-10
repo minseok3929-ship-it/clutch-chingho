@@ -1,0 +1,24 @@
+name: ClutchTitle
+version: '${version}'
+main: kr.clutch.title.ClutchTitlePlugin
+api-version: '1.21'
+author: Clutch
+description: Manual colored title system for Paper.
+libraries:
+  - org.xerial:sqlite-jdbc:3.50.3.0
+
+commands:
+  칭호:
+    description: 칭호 GUI를 열거나 칭호를 지급합니다.
+    usage: /칭호 [지급 <닉네임> <칭호이름> [색상]]
+    aliases:
+      - title
+      - titles
+
+permissions:
+  clutchtitle.use:
+    description: 칭호 GUI를 사용할 수 있습니다.
+    default: true
+  clutchtitle.grant:
+    description: 칭호를 수동 지급할 수 있습니다.
+    default: op

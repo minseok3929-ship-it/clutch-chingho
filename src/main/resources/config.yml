@@ -1,0 +1,27 @@
+database:
+  file: titles.db
+
+display:
+  chat:
+    enabled: true
+    format: "{display} {player}: {message}"
+  nametag:
+    enabled: true
+  tab:
+    enabled: true
+    format: "{display} {player}"
+
+gui:
+  title: "§8칭호 목록"
+  size: 54
+  empty-message: "§8[CLUTCH] §c보유한 칭호가 없습니다."
+
+messages:
+  invalid-color: "§8[CLUTCH] §c존재하지 않는 색상입니다."
+  player-only: "§8[CLUTCH] §c플레이어만 사용할 수 있습니다."
+  no-permission: "§8[CLUTCH] §c권한이 없습니다."
+  usage-grant: "§8[CLUTCH] §c사용법: /칭호 지급 <닉네임> <칭호이름> [색상]"
+  granted: "§8[CLUTCH] §a{player}님에게 {display} §a칭호를 지급했습니다."
+  equipped: "§8[CLUTCH] §a{display} §a칭호를 장착했습니다."
+  unequipped: "§8[CLUTCH] §e칭호를 해제했습니다."
+  not-owned: "§8[CLUTCH] §c보유하지 않은 칭호입니다."
