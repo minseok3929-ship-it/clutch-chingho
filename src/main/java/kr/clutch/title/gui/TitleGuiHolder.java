@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class TitleGuiHolder implements InventoryHolder {
-    private final Map<Integer, Long> titleIdsBySlot = new HashMap<>();
+    private final Map<Integer, String> titleNamesBySlot = new HashMap<>();
     private Inventory inventory;
 
     @Override
@@ -19,11 +19,11 @@ public final class TitleGuiHolder implements InventoryHolder {
         this.inventory = inventory;
     }
 
-    public void bind(int slot, long titleId) {
-        titleIdsBySlot.put(slot, titleId);
+    public void bind(int slot, String titleName) {
+        titleNamesBySlot.put(slot, titleName);
     }
 
-    public Long titleId(int slot) {
-        return titleIdsBySlot.get(slot);
+    public String titleName(int slot) {
+        return titleNamesBySlot.get(slot);
     }
 }

@@ -9,16 +9,21 @@ libraries:
 
 commands:
   칭호:
-    description: 칭호 GUI를 열거나 칭호를 지급합니다.
-    usage: /칭호 [지급 <닉네임> <칭호이름> [색상]]
+    description: 칭호 GUI를 열거나 칭호를 관리합니다.
+    usage: "/칭호"
     aliases:
       - title
       - titles
+  칭호권:
+    description: 칭호 획득권을 생성합니다.
+    usage: "/칭호권 생성 <칭호이름> <색상> <개수>"
+    aliases:
+      - titleticket
 
 permissions:
-  clutchtitle.use:
+  clutch.title.use:
     description: 칭호 GUI를 사용할 수 있습니다.
     default: true
-  clutchtitle.grant:
-    description: 칭호를 수동 지급할 수 있습니다.
+  clutch.title.admin:
+    description: 칭호 지급, 확인, 삭제, 칭호권 생성을 사용할 수 있습니다.
     default: op

@@ -1,18 +1,21 @@
 # ClutchTitle Architecture
 
-ClutchTitle is a Paper 1.21.11 plugin for manually granting colored player titles.
+ClutchTitle is a Paper 1.21.11 plugin for manually granting colored player titles and title-claim tickets.
 
 ## Main flow
 
 - `/칭호` opens the player's owned-title GUI.
 - `/칭호 지급 <닉네임> <칭호이름> [색상]` grants a title manually.
-- The color argument may be a supported color name or a legacy Minecraft color code.
-- When the color is omitted, the title is granted with `§f` white.
-- Each grant stores `title_name`, `color_code`, and `display` separately.
+- `/칭호 확인 <닉네임>` lists a player's owned titles and marks the equipped title.
+- `/칭호 삭제 <닉네임> <칭호이름>` removes a player's title and clears it if equipped.
+- `/칭호권 생성 <칭호이름> <색상> <개수>` creates title-claim ticket items.
+- The color argument may be a supported color name, a legacy Minecraft color code, or a `#RRGGBB` HEX value.
+- When the manual grant color is omitted, the title is granted with `§f` white.
+- The title name itself is the unique title identifier.
 
 ## Display targets
 
-The equipped title display is reused by all visible surfaces:
+The stored `display_name` value is reused by all visible surfaces:
 
 - GUI item name and lore
 - chat prefix
@@ -23,7 +26,7 @@ The equipped title display is reused by all visible surfaces:
 
 SQLite tables:
 
-- `player_titles`: one row for each manually granted title.
-- `equipped_titles`: one equipped title id per player.
+- `titles`: one row per unique `title_name`, with `color` and `display_name`.
+- `player_titles`: one row per player/title pair, with an `equipped` flag.
 
-The initial data model intentionally stores each player grant as an independent title record so future features can add expiration, grant reasons, grant admins, categories, or per-player variants without changing the command flow.
+The data model keeps the title name as the stable identifier so future metadata can be added without exposing separate title keys to admins.

@@ -27,13 +27,13 @@ public final class TitleColor {
     private TitleColor() {
     }
 
-    public static String defaultColorCode() {
+    public static String defaultColor() {
         return "§f";
     }
 
     public static Optional<String> parse(String input) {
         if (input == null || input.isBlank()) {
-            return Optional.of(defaultColorCode());
+            return Optional.of(defaultColor());
         }
 
         String normalized = input.trim().toLowerCase(Locale.ROOT);
@@ -49,11 +49,27 @@ public final class TitleColor {
             }
         }
 
+        if (normalized.matches("#[0-9a-f]{6}")) {
+            return Optional.of(toLegacyHex(normalized));
+        }
+
         return Optional.empty();
     }
 
-    public static String display(String titleName, String colorCode) {
-        return colorCode + "[" + titleName + "]";
+    public static String displayName(String titleName, String color) {
+        return color + "[" + titleName + "]";
+    }
+
+    public static boolean isHexColor(String color) {
+        return color != null && color.matches("§x(§[0-9a-fA-F]){6}");
+    }
+
+    private static String toLegacyHex(String hex) {
+        StringBuilder builder = new StringBuilder("§x");
+        for (int index = 1; index < hex.length(); index++) {
+            builder.append('§').append(Character.toUpperCase(hex.charAt(index)));
+        }
+        return builder.toString();
     }
 
     private static boolean isSupportedLegacyColorCode(char code) {

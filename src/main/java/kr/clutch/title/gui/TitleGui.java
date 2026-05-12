@@ -5,7 +5,9 @@ import kr.clutch.title.service.TitleService;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -13,7 +15,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 public final class TitleGui {
     private final FileConfiguration config;
@@ -31,7 +32,6 @@ public final class TitleGui {
             return;
         }
 
-        Optional<PlayerTitle> equipped = titleService.equippedTitle(player.getUniqueId());
         TitleGuiHolder holder = new TitleGuiHolder();
         int size = config.getInt("gui.size", 54);
         Inventory inventory = Bukkit.createInventory(holder, size, config.getString("gui.title", "§8칭호 목록"));
@@ -40,25 +40,27 @@ public final class TitleGui {
         int maxTitleSlots = Math.min(size - 1, titles.size());
         for (int slot = 0; slot < maxTitleSlots; slot++) {
             PlayerTitle title = titles.get(slot);
-            boolean isEquipped = equipped.map(PlayerTitle::id).filter(id -> id == title.id()).isPresent();
-            inventory.setItem(slot, titleItem(title, isEquipped));
-            holder.bind(slot, title.id());
+            inventory.setItem(slot, titleItem(title));
+            holder.bind(slot, title.titleName());
         }
         inventory.setItem(size - 1, unequipItem());
         player.openInventory(inventory);
     }
 
-    private ItemStack titleItem(PlayerTitle title, boolean equipped) {
-        ItemStack item = new ItemStack(equipped ? Material.ENCHANTED_BOOK : Material.NAME_TAG);
+    private ItemStack titleItem(PlayerTitle title) {
+        ItemStack item = new ItemStack(title.equipped() ? Material.ENCHANTED_BOOK : Material.NAME_TAG);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(title.display());
+        meta.setDisplayName(title.displayName());
         List<String> lore = new ArrayList<>();
         lore.add("§7칭호 이름: §f" + title.titleName());
-        lore.add("§7색상 코드: §f" + title.colorCode().replace('§', '&'));
-        lore.add("§7표시: " + title.display());
+        lore.add("§7표시: " + title.displayName());
         lore.add("");
-        lore.add(equipped ? "§a현재 장착 중입니다." : "§e클릭하여 장착합니다.");
+        lore.add(title.equipped() ? "§a현재 장착 중입니다." : "§e클릭하여 장착합니다.");
         meta.setLore(lore);
+        if (title.equipped()) {
+            meta.addEnchant(Enchantment.UNBREAKING, 1, true);
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
+        }
         item.setItemMeta(meta);
         return item;
     }

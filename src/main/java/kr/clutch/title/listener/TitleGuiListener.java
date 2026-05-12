@@ -42,16 +42,16 @@ public final class TitleGuiListener implements Listener {
                 return;
             }
 
-            Long titleId = holder.titleId(event.getRawSlot());
-            if (titleId == null) {
+            String titleName = holder.titleName(event.getRawSlot());
+            if (titleName == null) {
                 return;
             }
-            if (!titleService.equip(player, titleId)) {
+            if (!titleService.equip(player, titleName)) {
                 player.sendMessage(MessageUtil.message(config, "not-owned"));
                 return;
             }
             titleService.equippedTitle(player.getUniqueId()).ifPresent(title -> player.sendMessage(
-                    MessageUtil.apply(MessageUtil.message(config, "equipped"), "display", title.display())
+                    MessageUtil.apply(MessageUtil.message(config, "equipped"), "display_name", title.displayName())
             ));
             titleGui.open(player);
         } catch (SQLException exception) {

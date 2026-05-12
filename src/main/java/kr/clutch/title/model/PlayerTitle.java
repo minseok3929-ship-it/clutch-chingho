@@ -4,12 +4,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record PlayerTitle(
-        long id,
         UUID playerUuid,
-        String playerName,
         String titleName,
-        String colorCode,
-        String display,
+        String color,
+        String displayName,
+        boolean equipped,
         Instant grantedAt
 ) {
 }

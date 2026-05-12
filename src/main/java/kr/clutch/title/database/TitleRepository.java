@@ -1,12 +1,12 @@
 package kr.clutch.title.database;
 
 import kr.clutch.title.model.PlayerTitle;
+import kr.clutch.title.model.Title;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,99 +20,157 @@ public final class TitleRepository {
         this.connection = connection;
     }
 
-    public PlayerTitle grant(UUID playerUuid, String playerName, String titleName, String colorCode, String display) throws SQLException {
-        long grantedAt = Instant.now().toEpochMilli();
+    public void upsertTitle(Title title) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO player_titles(player_uuid, player_name, title_name, color_code, display, granted_at) VALUES (?, ?, ?, ?, ?, ?)",
-                Statement.RETURN_GENERATED_KEYS
+                "INSERT INTO titles(title_name, color, display_name) VALUES (?, ?, ?) "
+                        + "ON CONFLICT(title_name) DO UPDATE SET color = excluded.color, display_name = excluded.display_name"
         )) {
-            statement.setString(1, playerUuid.toString());
-            statement.setString(2, playerName);
-            statement.setString(3, titleName);
-            statement.setString(4, colorCode);
-            statement.setString(5, display);
-            statement.setLong(6, grantedAt);
+            statement.setString(1, title.titleName());
+            statement.setString(2, title.color());
+            statement.setString(3, title.displayName());
             statement.executeUpdate();
-            try (ResultSet keys = statement.getGeneratedKeys()) {
-                if (keys.next()) {
-                    return new PlayerTitle(keys.getLong(1), playerUuid, playerName, titleName, colorCode, display, Instant.ofEpochMilli(grantedAt));
+        }
+    }
+
+    public Optional<Title> findTitle(String titleName) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT title_name, color, display_name FROM titles WHERE title_name = ?"
+        )) {
+            statement.setString(1, titleName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return Optional.of(mapTitle(resultSet));
                 }
             }
         }
-        throw new SQLException("Failed to read generated title id.");
+        return Optional.empty();
+    }
+
+    public boolean grant(UUID playerUuid, String titleName) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "INSERT OR IGNORE INTO player_titles(uuid, title_name, equipped, granted_at) VALUES (?, ?, 0, ?)"
+        )) {
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, titleName);
+            statement.setLong(3, Instant.now().toEpochMilli());
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    public boolean hasTitle(UUID playerUuid, String titleName) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT 1 FROM player_titles WHERE uuid = ? AND title_name = ?"
+        )) {
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, titleName);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next();
+            }
+        }
     }
 
     public List<PlayerTitle> findByPlayer(UUID playerUuid) throws SQLException {
         List<PlayerTitle> titles = new ArrayList<>();
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id, player_uuid, player_name, title_name, color_code, display, granted_at FROM player_titles WHERE player_uuid = ? ORDER BY granted_at DESC, id DESC"
+                "SELECT pt.uuid, pt.title_name, t.color, t.display_name, pt.equipped, pt.granted_at "
+                        + "FROM player_titles pt JOIN titles t ON pt.title_name = t.title_name "
+                        + "WHERE pt.uuid = ? ORDER BY pt.equipped DESC, pt.granted_at DESC, pt.title_name ASC"
         )) {
             statement.setString(1, playerUuid.toString());
             try (ResultSet resultSet = statement.executeQuery()) {
                 while (resultSet.next()) {
-                    titles.add(map(resultSet));
+                    titles.add(mapPlayerTitle(resultSet));
                 }
             }
         }
         return titles;
     }
 
-    public Optional<PlayerTitle> findById(long id) throws SQLException {
+    public Optional<PlayerTitle> findPlayerTitle(UUID playerUuid, String titleName) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT id, player_uuid, player_name, title_name, color_code, display, granted_at FROM player_titles WHERE id = ?"
+                "SELECT pt.uuid, pt.title_name, t.color, t.display_name, pt.equipped, pt.granted_at "
+                        + "FROM player_titles pt JOIN titles t ON pt.title_name = t.title_name "
+                        + "WHERE pt.uuid = ? AND pt.title_name = ?"
         )) {
-            statement.setLong(1, id);
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, titleName);
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    return Optional.of(map(resultSet));
+                    return Optional.of(mapPlayerTitle(resultSet));
                 }
             }
         }
         return Optional.empty();
-    }
-
-    public void equip(UUID playerUuid, long titleId) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(
-                "INSERT INTO equipped_titles(player_uuid, title_id, equipped_at) VALUES (?, ?, ?) "
-                        + "ON CONFLICT(player_uuid) DO UPDATE SET title_id = excluded.title_id, equipped_at = excluded.equipped_at"
-        )) {
-            statement.setString(1, playerUuid.toString());
-            statement.setLong(2, titleId);
-            statement.setLong(3, Instant.now().toEpochMilli());
-            statement.executeUpdate();
-        }
-    }
-
-    public void unequip(UUID playerUuid) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM equipped_titles WHERE player_uuid = ?")) {
-            statement.setString(1, playerUuid.toString());
-            statement.executeUpdate();
-        }
     }
 
     public Optional<PlayerTitle> findEquipped(UUID playerUuid) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(
-                "SELECT pt.id, pt.player_uuid, pt.player_name, pt.title_name, pt.color_code, pt.display, pt.granted_at "
-                        + "FROM equipped_titles et JOIN player_titles pt ON et.title_id = pt.id WHERE et.player_uuid = ?"
+                "SELECT pt.uuid, pt.title_name, t.color, t.display_name, pt.equipped, pt.granted_at "
+                        + "FROM player_titles pt JOIN titles t ON pt.title_name = t.title_name "
+                        + "WHERE pt.uuid = ? AND pt.equipped = 1"
         )) {
             statement.setString(1, playerUuid.toString());
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    return Optional.of(map(resultSet));
+                    return Optional.of(mapPlayerTitle(resultSet));
                 }
             }
         }
         return Optional.empty();
     }
 
-    private PlayerTitle map(ResultSet resultSet) throws SQLException {
-        return new PlayerTitle(
-                resultSet.getLong("id"),
-                UUID.fromString(resultSet.getString("player_uuid")),
-                resultSet.getString("player_name"),
+    public boolean equip(UUID playerUuid, String titleName) throws SQLException {
+        if (!hasTitle(playerUuid, titleName)) {
+            return false;
+        }
+        connection.setAutoCommit(false);
+        try (PreparedStatement clear = connection.prepareStatement("UPDATE player_titles SET equipped = 0 WHERE uuid = ?");
+             PreparedStatement equip = connection.prepareStatement("UPDATE player_titles SET equipped = 1 WHERE uuid = ? AND title_name = ?")) {
+            clear.setString(1, playerUuid.toString());
+            clear.executeUpdate();
+            equip.setString(1, playerUuid.toString());
+            equip.setString(2, titleName);
+            boolean updated = equip.executeUpdate() > 0;
+            connection.commit();
+            return updated;
+        } catch (SQLException exception) {
+            connection.rollback();
+            throw exception;
+        } finally {
+            connection.setAutoCommit(true);
+        }
+    }
+
+    public void unequip(UUID playerUuid) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("UPDATE player_titles SET equipped = 0 WHERE uuid = ?")) {
+            statement.setString(1, playerUuid.toString());
+            statement.executeUpdate();
+        }
+    }
+
+    public boolean remove(UUID playerUuid, String titleName) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement("DELETE FROM player_titles WHERE uuid = ? AND title_name = ?")) {
+            statement.setString(1, playerUuid.toString());
+            statement.setString(2, titleName);
+            return statement.executeUpdate() > 0;
+        }
+    }
+
+    private Title mapTitle(ResultSet resultSet) throws SQLException {
+        return new Title(
                 resultSet.getString("title_name"),
-                resultSet.getString("color_code"),
-                resultSet.getString("display"),
+                resultSet.getString("color"),
+                resultSet.getString("display_name")
+        );
+    }
+
+    private PlayerTitle mapPlayerTitle(ResultSet resultSet) throws SQLException {
+        return new PlayerTitle(
+                UUID.fromString(resultSet.getString("uuid")),
+                resultSet.getString("title_name"),
+                resultSet.getString("color"),
+                resultSet.getString("display_name"),
+                resultSet.getInt("equipped") == 1,
                 Instant.ofEpochMilli(resultSet.getLong("granted_at"))
         );
     }

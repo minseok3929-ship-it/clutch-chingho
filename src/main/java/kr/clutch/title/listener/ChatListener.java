@@ -26,9 +26,10 @@ public final class ChatListener implements Listener {
         }
 
         try {
-            String display = displayService.equippedTitle(event.getPlayer()).map(title -> title.display() + ChatColor.RESET).orElse("");
-            String format = config.getString("display.chat.format", "{display} {player}: {message}")
+            String display = displayService.equippedTitle(event.getPlayer()).map(title -> title.displayName() + ChatColor.RESET).orElse("");
+            String format = config.getString("display.chat.format", "{display_name} {player}: {message}")
                     .replace("{display}", display)
+                    .replace("{display_name}", display)
                     .replace("{player}", "%1$s")
                     .replace("{message}", "%2$s");
             event.setFormat(format);

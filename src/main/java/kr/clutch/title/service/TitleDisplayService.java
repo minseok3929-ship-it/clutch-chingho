@@ -35,8 +35,9 @@ public final class TitleDisplayService {
 
     public void refresh(Player player) throws SQLException {
         Optional<PlayerTitle> title = equippedTitle(player);
-        updateNameTag(player, title.map(PlayerTitle::display).orElse(""));
-        updateTab(player, title.map(PlayerTitle::display).orElse(""));
+        String displayName = title.map(PlayerTitle::displayName).orElse("");
+        updateNameTag(player, displayName);
+        updateTab(player, displayName);
     }
 
     public void refreshAll() {
@@ -54,7 +55,7 @@ public final class TitleDisplayService {
         player.setPlayerListName(player.getName());
     }
 
-    private void updateNameTag(Player player, String display) {
+    private void updateNameTag(Player player, String displayName) {
         if (!config.getBoolean("display.nametag.enabled", true)) {
             clearNameTag(player);
             return;
@@ -70,7 +71,7 @@ public final class TitleDisplayService {
         if (!team.hasEntry(player.getName())) {
             team.addEntry(player.getName());
         }
-        team.setPrefix(display.isBlank() ? "" : display + ChatColor.RESET + " ");
+        team.setPrefix(displayName.isBlank() ? "" : displayName + ChatColor.RESET + " ");
     }
 
     private void clearNameTag(Player player) {
@@ -84,15 +85,16 @@ public final class TitleDisplayService {
         }
     }
 
-    private void updateTab(Player player, String display) {
-        if (!config.getBoolean("display.tab.enabled", true) || display.isBlank()) {
+    private void updateTab(Player player, String displayName) {
+        if (!config.getBoolean("display.tab.enabled", true) || displayName.isBlank()) {
             player.setPlayerListName(player.getName());
             return;
         }
 
-        String format = config.getString("display.tab.format", "{display} {player}");
+        String format = config.getString("display.tab.format", "{display_name} {player}");
         player.setPlayerListName(format
-                .replace("{display}", display)
+                .replace("{display}", displayName)
+                .replace("{display_name}", displayName)
                 .replace("{player}", player.getName()) + ChatColor.RESET);
     }
 
