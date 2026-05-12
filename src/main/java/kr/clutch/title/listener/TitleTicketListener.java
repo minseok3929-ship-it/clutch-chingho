@@ -57,19 +57,19 @@ public final class TitleTicketListener implements Listener {
         try {
             TitleService.ClaimResult result = titleService.claimTicket(player, titleName);
             if (!result.titleExists()) {
-                player.sendMessage("§8[CLUTCH] §c존재하지 않는 칭호입니다.");
+                MessageUtil.send(player, config, "missing-title");
                 return;
             }
             Title title = result.title();
             if (!result.granted()) {
-                player.sendMessage(MessageUtil.message(config, "already-owned"));
+                MessageUtil.send(player, config, "already-owned");
                 return;
             }
             item.setAmount(item.getAmount() - 1);
-            player.sendMessage(MessageUtil.apply(MessageUtil.message(config, "received"), "display_name", title.displayName()));
+            MessageUtil.send(player, config, "received", java.util.Map.of("title", title.titleName(), "display", title.displayName(), "display_name", title.displayName(), "color", title.color()));
             player.sendTitle("§8CLUTCH", title.displayName(), 10, 60, 20);
         } catch (SQLException exception) {
-            player.sendMessage("§8[CLUTCH] §c칭호 획득 중 오류가 발생했습니다.");
+            MessageUtil.send(player, config, "error-claim");
             exception.printStackTrace();
         }
     }

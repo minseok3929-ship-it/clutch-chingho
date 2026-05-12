@@ -37,7 +37,7 @@ public final class TitleGuiListener implements Listener {
         try {
             if (event.getRawSlot() == size - 1) {
                 titleService.unequip(player);
-                player.sendMessage(MessageUtil.message(config, "unequipped"));
+                MessageUtil.send(player, config, "unequipped");
                 titleGui.open(player);
                 return;
             }
@@ -47,15 +47,18 @@ public final class TitleGuiListener implements Listener {
                 return;
             }
             if (!titleService.equip(player, titleName)) {
-                player.sendMessage(MessageUtil.message(config, "not-owned"));
+                MessageUtil.send(player, config, "not-owned");
                 return;
             }
-            titleService.equippedTitle(player.getUniqueId()).ifPresent(title -> player.sendMessage(
-                    MessageUtil.apply(MessageUtil.message(config, "equipped"), "display_name", title.displayName())
-            ));
+            titleService.equippedTitle(player.getUniqueId()).ifPresent(title -> MessageUtil.send(player, config, "equipped", java.util.Map.of(
+                    "title", title.titleName(),
+                    "display", title.displayName(),
+                    "display_name", title.displayName(),
+                    "color", title.color()
+            )));
             titleGui.open(player);
         } catch (SQLException exception) {
-            player.sendMessage("§8[CLUTCH] §c칭호를 변경하지 못했습니다.");
+            MessageUtil.send(player, config, "error-change");
             exception.printStackTrace();
         }
     }

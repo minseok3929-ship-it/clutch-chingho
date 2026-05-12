@@ -1,6 +1,7 @@
 package kr.clutch.title.gui;
 
 import kr.clutch.title.model.PlayerTitle;
+import kr.clutch.title.util.MessageUtil;
 import kr.clutch.title.service.TitleService;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -28,7 +29,7 @@ public final class TitleGui {
     public void open(Player player) throws SQLException {
         List<PlayerTitle> titles = titleService.ownedTitles(player.getUniqueId());
         if (titles.isEmpty()) {
-            player.sendMessage(config.getString("gui.empty-message", "§8[CLUTCH] §c보유한 칭호가 없습니다."));
+            MessageUtil.sendRaw(player, config.getString("gui.empty-message", "§c보유한 칭호가 없습니다."));
             return;
         }
 

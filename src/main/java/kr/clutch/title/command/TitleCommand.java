@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public final class TitleCommand implements CommandExecutor, TabCompleter {
@@ -37,29 +38,37 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length > 0 && args[0].equalsIgnoreCase("지급")) {
+        if (args.length == 0) {
+            return openGui(sender);
+        }
+        if (args[0].equalsIgnoreCase("지급")) {
             return grant(sender, args);
         }
-        if (args.length > 0 && args[0].equalsIgnoreCase("확인")) {
+        if (args[0].equalsIgnoreCase("확인")) {
             return list(sender, args);
         }
-        if (args.length > 0 && args[0].equalsIgnoreCase("삭제")) {
+        if (args[0].equalsIgnoreCase("삭제")) {
             return delete(sender, args);
         }
 
+        sendHelp(sender);
+        return true;
+    }
+
+    private boolean openGui(CommandSender sender) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(MessageUtil.message(config, "player-only"));
+            MessageUtil.send(sender, config, "player-only");
             return true;
         }
         if (!player.hasPermission("clutch.title.use")) {
-            player.sendMessage(MessageUtil.message(config, "no-permission"));
+            MessageUtil.send(player, config, "no-permission");
             return true;
         }
 
         try {
             titleGui.open(player);
         } catch (SQLException exception) {
-            player.sendMessage("§8[CLUTCH] §c칭호 목록을 불러오지 못했습니다.");
+            MessageUtil.send(player, config, "error-list");
             exception.printStackTrace();
         }
         return true;
@@ -67,17 +76,17 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
 
     private boolean grant(CommandSender sender, String[] args) {
         if (!sender.hasPermission("clutch.title.admin")) {
-            sender.sendMessage(MessageUtil.message(config, "no-permission"));
+            MessageUtil.send(sender, config, "no-permission");
             return true;
         }
-        if (args.length < 3 || args.length > 4) {
-            sender.sendMessage(MessageUtil.message(config, "usage-grant"));
+        if (args.length != 4) {
+            MessageUtil.send(sender, config, "usage-grant");
             return true;
         }
 
-        Optional<String> color = args.length == 4 ? TitleColor.parse(args[3]) : Optional.of(TitleColor.defaultColor());
+        Optional<String> color = TitleColor.parse(args[3]);
         if (color.isEmpty()) {
-            sender.sendMessage(MessageUtil.message(config, "invalid-color"));
+            MessageUtil.send(sender, config, "invalid-color");
             return true;
         }
 
@@ -86,16 +95,23 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
         try {
             TitleService.GrantResult result = titleService.grant(target, args[2], color.get());
             if (!result.granted()) {
-                sender.sendMessage(MessageUtil.message(config, "already-owned"));
+                MessageUtil.send(sender, config, "already-owned");
                 return true;
             }
-            sender.sendMessage(MessageUtil.apply(MessageUtil.message(config, "granted"), "display_name", result.title().displayName()));
+            Map<String, String> placeholders = Map.of(
+                    "player", args[1],
+                    "title", result.title().titleName(),
+                    "display", result.title().displayName(),
+                    "display_name", result.title().displayName(),
+                    "color", result.title().color()
+            );
+            MessageUtil.send(sender, config, "granted", placeholders);
             Player onlineTarget = target.getPlayer();
             if (onlineTarget != null) {
-                onlineTarget.sendMessage(MessageUtil.apply(MessageUtil.message(config, "received"), "display_name", result.title().displayName()));
+                MessageUtil.send(onlineTarget, config, "received", placeholders);
             }
         } catch (SQLException exception) {
-            sender.sendMessage("§8[CLUTCH] §c칭호 지급 중 오류가 발생했습니다.");
+            MessageUtil.send(sender, config, "error-grant");
             exception.printStackTrace();
         }
         return true;
@@ -103,11 +119,11 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
 
     private boolean list(CommandSender sender, String[] args) {
         if (!sender.hasPermission("clutch.title.admin")) {
-            sender.sendMessage(MessageUtil.message(config, "no-permission"));
+            MessageUtil.send(sender, config, "no-permission");
             return true;
         }
         if (args.length != 2) {
-            sender.sendMessage(MessageUtil.message(config, "usage-check"));
+            MessageUtil.send(sender, config, "usage-check");
             return true;
         }
 
@@ -115,16 +131,16 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
         try {
             List<PlayerTitle> titles = titleService.ownedTitles(target.getUniqueId());
-            sender.sendMessage("§8[CLUTCH] §f" + args[1] + "의 보유 칭호:");
+            MessageUtil.sendRaw(sender, "§f<player>의 보유 칭호:", Map.of("player", args[1]));
             if (titles.isEmpty()) {
-                sender.sendMessage("- §7없음");
+                MessageUtil.sendRaw(sender, "§7- 없음");
                 return true;
             }
             for (PlayerTitle title : titles) {
-                sender.sendMessage("- " + title.displayName() + (title.equipped() ? " §a(장착중)" : ""));
+                MessageUtil.sendRaw(sender, "§f- <display>§f" + (title.equipped() ? " §a(장착중)" : ""), Map.of("display", title.displayName()));
             }
         } catch (SQLException exception) {
-            sender.sendMessage("§8[CLUTCH] §c칭호 목록을 불러오지 못했습니다.");
+            MessageUtil.send(sender, config, "error-list");
             exception.printStackTrace();
         }
         return true;
@@ -132,11 +148,11 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
 
     private boolean delete(CommandSender sender, String[] args) {
         if (!sender.hasPermission("clutch.title.admin")) {
-            sender.sendMessage(MessageUtil.message(config, "no-permission"));
+            MessageUtil.send(sender, config, "no-permission");
             return true;
         }
         if (args.length != 3) {
-            sender.sendMessage(MessageUtil.message(config, "usage-delete"));
+            MessageUtil.send(sender, config, "usage-delete");
             return true;
         }
 
@@ -144,15 +160,22 @@ public final class TitleCommand implements CommandExecutor, TabCompleter {
         OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
         try {
             if (!titleService.removeTitle(target, args[2])) {
-                sender.sendMessage(MessageUtil.message(config, "not-owned-delete"));
+                MessageUtil.send(sender, config, "not-owned-delete");
                 return true;
             }
-            sender.sendMessage(MessageUtil.message(config, "deleted"));
+            MessageUtil.send(sender, config, "deleted");
         } catch (SQLException exception) {
-            sender.sendMessage("§8[CLUTCH] §c칭호 삭제 중 오류가 발생했습니다.");
+            MessageUtil.send(sender, config, "error-delete");
             exception.printStackTrace();
         }
         return true;
+    }
+
+    private void sendHelp(CommandSender sender) {
+        MessageUtil.send(sender, config, "help-title");
+        MessageUtil.send(sender, config, "help-grant");
+        MessageUtil.send(sender, config, "help-check");
+        MessageUtil.send(sender, config, "help-delete");
     }
 
     @Override

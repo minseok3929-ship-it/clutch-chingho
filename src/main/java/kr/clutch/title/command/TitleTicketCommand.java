@@ -32,21 +32,21 @@ public final class TitleTicketCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!sender.hasPermission("clutch.title.admin")) {
-            sender.sendMessage(MessageUtil.message(config, "no-permission"));
+            MessageUtil.send(sender, config, "no-permission");
             return true;
         }
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(MessageUtil.message(config, "player-only"));
+            MessageUtil.send(sender, config, "player-only");
             return true;
         }
         if (args.length != 4 || !args[0].equalsIgnoreCase("생성")) {
-            sender.sendMessage(MessageUtil.message(config, "usage-ticket"));
+            MessageUtil.send(sender, config, "usage-ticket");
             return true;
         }
 
         Optional<String> color = TitleColor.parse(args[2]);
         if (color.isEmpty()) {
-            sender.sendMessage(MessageUtil.message(config, "invalid-color"));
+            MessageUtil.send(sender, config, "invalid-color");
             return true;
         }
 
@@ -54,11 +54,11 @@ public final class TitleTicketCommand implements CommandExecutor, TabCompleter {
         try {
             amount = Integer.parseInt(args[3]);
         } catch (NumberFormatException exception) {
-            sender.sendMessage(MessageUtil.message(config, "invalid-amount"));
+            MessageUtil.send(sender, config, "invalid-amount");
             return true;
         }
         if (amount < 1) {
-            sender.sendMessage(MessageUtil.message(config, "invalid-amount"));
+            MessageUtil.send(sender, config, "invalid-amount");
             return true;
         }
 
@@ -69,9 +69,15 @@ public final class TitleTicketCommand implements CommandExecutor, TabCompleter {
             for (ItemStack leftover : leftovers.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), leftover);
             }
-            sender.sendMessage(MessageUtil.apply(MessageUtil.message(config, "ticket-created"), "display_name", title.displayName()));
+            MessageUtil.send(sender, config, "ticket-created", Map.of(
+                    "title", title.titleName(),
+                    "display", title.displayName(),
+                    "display_name", title.displayName(),
+                    "color", title.color(),
+                    "amount", String.valueOf(amount)
+            ));
         } catch (SQLException exception) {
-            sender.sendMessage("§8[CLUTCH] §c칭호권 생성 중 오류가 발생했습니다.");
+            MessageUtil.send(sender, config, "error-ticket-create");
             exception.printStackTrace();
         }
         return true;
